@@ -1,0 +1,27 @@
+server:
+  port: 9090
+spring:
+  application:
+    name: user-service
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        serviceId: dj-config #配置中心的名称
+      name: config  #名称前缀
+      profile: dev #名称后缀
+#连接注册中心
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8080/eureka/
+  instance:
+    prefer-ip-address: true  #支持域名直接解析ip
+swagger:
+  enabled: true
+
+#请求处理的超时时间
+ribbon:
+  ReadTimeout: 1200000
+  #请求连接的超时时间
+  ConnectTimeout: 30000

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.p2p.mapper.BaseDataMapper">
+
+
+    <!--开户页面所需的基础数据-->
+    <select id="findopenAccount" resultType="com.dj.p2p.pojo.BaseDataVo">
+		SELECT
+			pb.id,
+			pb.base_name
+		FROM
+			p2p_base_data pb
+		WHERE
+			pb.p_id = #{userRole}
+		LIMIT 0,2
+	</select>
+</mapper>

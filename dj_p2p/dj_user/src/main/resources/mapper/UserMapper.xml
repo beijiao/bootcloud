@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.p2p.mapper.UserMapper">
+    <insert id="addLogin">
+
+		insert into p2p_login_records (create_time,user_id) values (#{date},#{userId})
+	</insert>
+    <update id="updateStatus">
+
+		update p2p_mark set is_signing = #{status} <where>id = #{markId}</where>
+
+
+	</update>
+
+
+    <select id="getSecurityCenterData" resultType="com.dj.p2p.pojo.SecurityCenterDataVO">
+		SELECT
+			pa.virtual_account as open_account_code,
+			pu.`name` as real_name,
+			pu.number as id_code,
+			pu.phone as binding_phone,
+			pa.card_no as banding_bank_card
+		FROM
+			p2p_user  pu
+		LEFT JOIN p2p_account pa ON pu.id = pa.user_id
+		where pu.id = #{userId}
+
+
+    </select>
+
+    <!--账户管理页面需要的数据-->
+    <select id="getAccountManagement" resultType="com.dj.p2p.pojo.AccountManager">
+SELECT
+	pam.available_balance,
+	pam.total_revenue,
+	pam.freeze_money,
+	pam.total_asset,
+	pam.due_money,
+	pam.wait_repay,
+	pb.base_name as role
+FROM
+	p2p_account_manager pam
+LEFT JOIN p2p_account pc ON pc.id = pam.acc_id
+LEFT JOIN p2p_base_data pb ON pc.account_type = pb.id
+WHERE
+	pc.user_id = #{userId}
+	</select>
+
+    <!--充值详情的数据-->
+    <select id="getUpMoneyDetails" resultType="com.dj.p2p.pojo.UpMoneyDetails">
+            SELECT
+                pa.customer_name as name,
+                pa.card_no as bank_code,
+                pa.reserved_phone as phone
+            FROM
+                p2p_account pa
+            WHERE
+				pa.user_id = #{userId}
+    </select>
+
+
+    <!--查询该用户的账户的钱数-->
+    <select id="selectAccManager" resultType="com.dj.p2p.pojo.AccountManager">
+		SELECT
+			pam.id,
+			pam.acc_id,
+			pam.total_asset,
+			pam.total_revenue,
+			pam.available_balance,
+			pam.freeze_money,
+			pam.due_money,
+			pam.wait_repay,
+	pa.trans_password
+		FROM
+			p2p_account_manager pam
+		LEFT JOIN p2p_account pa ON pa.id = pam.acc_id
+		WHERE
+			pam.user_id  = #{userId}
+    </select>
+    <select id="getDrawManyData" resultType="com.dj.p2p.pojo.DrawMoneyVO">
+ 		SELECT
+			pam.available_balance,
+			pc.card_no as bank_code
+		FROM
+			p2p_account_manager pam
+		LEFT JOIN p2p_account pc ON pc.id = pam.acc_id
+		WHERE pc.user_id = #{userId}
+
+	</select>
+
+
+    <!--查询发标页面的借款人数据-->
+    <select id="findBorrowerData" resultType="com.dj.p2p.pojo.UserVO">
+		SELECT
+			pu.`name` as real_name,
+			pu.number as id_number
+		FROM
+			p2p_user pu
+		LEFT JOIN p2p_account pa ON pa.user_id = pu.id
+		WHERE pa.account_type = #{userType}
+	</select>
+    <!--查询风控那边用户信息的数据-->
+    <select id="findUserWindInfoData" resultType="com.dj.p2p.pojo.UserInfo">
+		SELECT
+			pu.id,
+			pu.`name` AS real_name,
+			pu.phone,
+			plr.create_time AS last_time,
+			pu.login_count,
+			(
+				CASE pu.`status`
+				WHEN 0 THEN
+					'未锁定'
+				WHEN 1 THEN
+					'已锁定'
+				END
+			) AS `status`,
+			(
+				CASE pa.card_no
+				WHEN pa.card_no THEN
+					'已开户'
+				ELSE
+					'未开户'
+				END
+			) opening_status
+		FROM
+			p2p_user pu
+		LEFT JOIN p2p_login_records plr ON plr.user_id = pu.id
+		LEFT JOIN p2p_account pa ON pa.user_id = pu.id
+		WHERE
+			plr.user_id IS NOT NULL
+		AND plr.create_time IN (
+			SELECT
+				MAX(ps.create_time)
+			FROM
+				p2p_login_records ps
+			GROUP BY
+				ps.user_id
+		)
+
+
+	</select>
+
+    <!--查询理财项目列表-->
+    <select id="findFinancialManagementProjects" resultType="com.dj.p2p.pojo.project.ProjectVO">
+        SELECT
+        pma.id,
+        pma.project_name,
+        pus.`name` AS borrower,
+        pma.money AS loan_amount,
+        pma.year_interest_rate,
+        (
+        CASE pt.base_name
+		WHEN '3期' THEN
+        '3个月'
+        WHEN '6期' THEN
+        '6个月'
+        WHEN '9期' THEN
+        '9个月'
+        ELSE
+        '12个月'
+        END
+        ) AS term,
+        (
+        money + money * year_interest_rate / 100
+        ) AS total_principal_and_interest,
+        money * year_interest_rate / 100 AS interest_amount,
+        pma.loan_time,
+        pcm.sales_time,
+        ps.base_name as `status`,
+        pma.current_money,
+        pcm.fundraising_time
+        FROM
+        p2p_mark pma
+        LEFT JOIN p2p_user pus ON pus.id = pma.borrower_id
+        LEFT JOIN p2p_base_data pp ON pp.id = pma.product
+        LEFT JOIN p2p_base_data ps ON ps.id = pma.`status`
+        LEFT JOIN p2p_base_data pt ON pt.id = pma.term
+        LEFT JOIN p2p_charging_mode pcm ON pcm.mark_id = pma.id
+        LEFT JOIN p2p_base_data pdss ON pdss.id = pma.`status`
+        LEFT JOIN p2p_account pa ON pa.user_id = pus.id
+        <where>
+            <if test="isWho == 1">
+                pma.`status` IN (
+                68,
+                69,
+                70,
+                71,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86
+                )
+                AND pus.id = #{userId}
+                AND pa.account_type = 38
+            </if>
+
+
+            <if test="isWho == 2">
+                AND pa.account_type = 38
+                AND pma.`status` in (80,81,82,83,84)
+                pma.buyer = #{userId}
+            </if>
+
+
+        </where>
+
+
+    </select>
+
+	<!--查询标数据-->
+	<select id="findMarkData" resultType="com.dj.p2p.pojo.BuyImmed">
+		SELECT
+			pm.current_money,
+			pm.money,
+			pm.is_quota,
+			pm.quota_count
+		FROM
+			p2p_mark pm
+		WHERE
+			pm.id = #{markId}
+
+
+	</select>
+    <select id="findBillByNumber" resultType="com.dj.p2p.pojo.Bill">
+		SELECT
+			b.number,
+			b.term_count,
+			b.principal_and_interest,
+			b.principal,
+			b.interest,
+			b.maturity_time,
+			b.`status`,
+			b.user_id,
+			b.mark_id
+		FROM
+			bill b
+		WHERE
+			b.number = #{number}
+
+	</select>
+
+
+</mapper>

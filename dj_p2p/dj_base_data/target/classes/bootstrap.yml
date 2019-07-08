@@ -1,0 +1,23 @@
+server:
+  port: 9091
+spring:
+  application:
+    name: base-service
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        serviceId: dj-config #配置中心的名称
+      name: config  #名称前缀
+      profile: dev #名称后缀
+
+#连接注册中心
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8080/eureka/
+  instance:
+    prefer-ip-address: true  #支持域名直接解析ip
+swagger:
+  enabled: true
+

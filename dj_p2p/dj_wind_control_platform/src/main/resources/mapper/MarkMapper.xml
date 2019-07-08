@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.p2p.wind.mapper.MarkMapper">
+
+    <!--   private String status;
+
+    /**
+     * 同意还是拒绝
+     */
+
+    private String opinion;
+    /**
+     * 审核时间
+     */
+
+    private Date createTime;
+
+    /**
+     * 标的id
+     */
+    private Integer markId;-->
+    <insert id="addRecords">
+ INSERT INTO p2p_approval_records (
+	`STATUS`,
+	opinion,
+	create_time,
+	mark_id,
+	`name`
+
+)
+VALUES
+	(#{records.status},#{records.opinion},#{records.createTime},#{records.markId},#{records.name})
+
+
+
+
+    </insert>
+    <insert id="addBillList">
+
+        insert into bill
+        (number, term_count, principal_and_interest, principal,interest,maturity_time,status,user_id,mark_id)
+        values
+        <foreach collection="list" item="reddemCode" index="index" separator=",">
+            (
+            #{reddemCode.number}, #{reddemCode.termCount},
+            #{reddemCode.principalAndInterest},
+            #{reddemCode.principal},
+            #{reddemCode.interest}, #{reddemCode.maturityTime},
+            #{reddemCode.status}, #{reddemCode.userId},#{reddemCode.markId}
+            )
+        </foreach>
+
+
+    </insert>
+    <update id="addBorrowMoney">
+update  p2p_account_manager  set available_balance = available_balance + #{money},total_asset = available_balance  where user_id = #{userId}
+
+
+
+    </update>
+
+    <!--查询风控审核列表-->
+    <select id="findWindControlList" resultType="com.dj.p2p.pojo.project.MarkVO">
+         SELECT
+            pma.id,
+            pma.project_name,
+            pus.`name` AS borrower,
+            pma.money AS loan_amount,
+            pma.year_interest_rate,
+            (
+                CASE pt.base_name
+                WHEN ' ' THEN
+                    '3个月'
+                WHEN '6期' THEN
+                    '6个月'
+                WHEN '9期' THEN
+                    '9个月'
+                ELSE
+                    '12个月'
+                END
+            ) AS term,
+            ps.base_name AS `status`,
+            (
+                money + money * year_interest_rate / 100
+            ) AS total_principal_and_interest,
+            money * year_interest_rate / 100 AS interest_amount
+        FROM
+            p2p_mark pma
+        LEFT JOIN p2p_user pus ON pus.id = pma.borrower_id
+        LEFT JOIN p2p_base_data pp ON pp.id = pma.product
+        LEFT JOIN p2p_base_data ps ON ps.id = pma.`status`
+        LEFT JOIN p2p_base_data pt ON pt.id = pma.term
+    </select>
+    <!--查询标名称信息-->
+    <select id="findMarkInfo" resultType="com.dj.p2p.pojo.project.MarkInformation">
+        SELECT
+            pmd.year_interest_rate,
+            (
+                CASE pt.base_name
+                WHEN '3期' THEN
+                    '3个月'
+                WHEN '6期' THEN
+                    '6个月'
+                WHEN '9期' THEN
+                    '9个月'
+        WHEN '12期' THEN
+                    '12个月'
+                ELSE
+                    null
+                END
+            ) AS term,
+            pmd.project_name,
+            pf.base_name as payment_method,
+            pmd.money as loan_amount,
+            pmd.money as may_cast,
+            pu.`name` as borrower,
+            (100)as starting_throw,
+            ps.base_name as `status`,
+            pmd.create_time,
+            pmd.id
+        FROM
+            p2p_user pu
+        LEFT JOIN p2p_mark pmd ON pu.id = pmd.borrower_id
+        LEFT JOIN p2p_account pa ON pu.id = pa.user_id
+        LEFT JOIN p2p_base_data pt on pt.id = pmd.term
+        LEFT JOIN p2p_base_data pf on pf.id = pmd.payment_method
+        LEFT JOIN p2p_base_data ps on ps.id = pmd.`status`
+        WHERE pa.account_type = 38 and pmd.id = #{markId}
+
+    </select>
+    <select id="findProjectInfo" resultType="com.dj.p2p.pojo.project.ProjectInfo">
+        SELECT
+            pu.`name` as real_name,
+            pu.age,
+            edu.base_name as edu,
+            ps.base_name as sex,
+            pmar.base_name as marriage,
+            pn.base_name as working_count,
+            pu.valuation,
+            pfan.base_name as house,
+            pche.base_name as car,
+            pshou.base_name as year_income,
+            pm.loan_desc
+        FROM
+            p2p_user pu
+        LEFT JOIN p2p_mark pm on pm.borrower_id = pu.id
+        LEFT JOIN p2p_base_data ps on ps.id = pu.sex
+        LEFT JOIN p2p_base_data edu on edu.id = pu.education
+        LEFT JOIN p2p_base_data pmar on pmar.id = pu.marriage
+        LEFT JOIN p2p_account pa on pa.user_id = pu.id
+        LEFT JOIN p2p_base_data pn on pn.id = pu.working_count
+        LEFT JOIN p2p_base_data pfan on pfan.id = pu.house
+        LEFT JOIN p2p_base_data pche on pche.id = pu.car
+        LEFT JOIN p2p_base_data pshou on pshou.id = pu.year_income
+        where pa.account_type = 38 and pm.id = #{markId}
+
+
+    </select>
+    <sql id="SQL">pb.id = 72
+OR pb.id = 73</sql>
+    <select id="findApprovalRecords" resultType="com.dj.p2p.pojo.project.ApprovalRecords">
+        SELECT
+            pr.id,
+            ps.base_name AS `status`,
+            pr.opinion,
+            pr.create_time AS approval_time,
+            pr.`name`
+        FROM
+            p2p_approval_records pr
+        LEFT JOIN p2p_base_data ps ON ps.id = pr.`status`
+        WHERE
+            pr.mark_id = #{markId}
+    </select>
+    <select id="findLoanContract" resultType="com.dj.p2p.pojo.project.LoanContract">
+
+        SELECT
+        pb.id,
+        pb.base_name AS loan_contract
+        FROM
+        p2p_base_data pb
+        WHERE
+        <include refid="SQL"/>
+    </select>
+    <select id="findChargeType" resultType="com.dj.p2p.pojo.project.LoanContract">
+
+        SELECT
+            pb.id,
+            pb.base_name AS charge_type
+        FROM
+            p2p_base_data pb
+        WHERE
+            pb.p_id = #{pId}
+
+
+    </select>
+
+    <!--查询理财项目列表-->
+    <select id="findFinancialManagementProjects" resultType="com.dj.p2p.pojo.project.ProjectVO">
+        SELECT
+        pma.id,
+        pma.project_name,
+        pus.`name` AS borrower,
+        pma.money AS loan_amount,
+        pma.year_interest_rate,
+        (
+        CASE pt.base_name
+        WHEN ' ' THEN
+        '3个月'
+        WHEN '6期' THEN
+        '6个月'
+        WHEN '9期' THEN
+        '9个月'
+        ELSE
+        '12个月'
+        END
+        ) AS term,
+        (
+        money + money * year_interest_rate / 100
+        ) AS total_principal_and_interest,
+        money * year_interest_rate / 100 AS interest_amount,
+        pma.loan_time,
+        pcm.sales_time,
+        ps.base_name as `status`,
+        pma.current_money,
+        pcm.fundraising_time
+        FROM
+        p2p_mark pma
+        LEFT JOIN p2p_user pus ON pus.id = pma.borrower_id
+        LEFT JOIN p2p_base_data pp ON pp.id = pma.product
+        LEFT JOIN p2p_base_data ps ON ps.id = pma.`status`
+        LEFT JOIN p2p_base_data pt ON pt.id = pma.term
+        LEFT JOIN p2p_charging_mode pcm ON pcm.mark_id = pma.id
+        LEFT JOIN p2p_base_data pdss ON pdss.id = pma.`status`
+        LEFT JOIN p2p_account pa ON pa.user_id = pus.id
+        <where>
+            <if test="isWho == 1">
+                pma.`status` IN (
+                68,
+                69,
+                70,
+                71,
+                80,
+                81,
+                82,
+                83,
+                84,
+                85,
+                86
+                )
+                AND pus.id = #{userId}
+
+            </if>
+
+            AND pa.account_type = 38
+            <if test="isWho == 2">
+                AND pma.`status` in (80,81,82,83,84)
+            </if>
+            <if test="isWho == 3">
+
+            </if>
+
+        </where>
+
+
+    </select>
+    <select id="findLendItList" resultType="com.dj.p2p.pojo.project.MarkInfo">
+        SELECT
+            pm.id,
+            pm.project_name,
+            pm.money ,
+            pm.year_interest_rate,
+            pb.base_name as term,
+            pm.create_time,
+            pm.person_count
+
+        FROM
+            p2p_mark pm LEFT JOIN p2p_user pu on pm.borrower_id = pu.id
+        LEFT JOIN p2p_base_data pb on pb.id = pm.term
+        WHERE
+            pm.`status` = 80
+
+
+    </select>
+
+
+</mapper>

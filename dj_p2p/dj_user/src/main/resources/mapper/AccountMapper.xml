@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dj.p2p.mapper.AccountMapper">
+
+
+    <select id="findBillByUserId" resultType="com.dj.p2p.pojo.Bill">
+        SELECT
+        b.number,
+        b.term_count,
+        b.principal_and_interest,
+        b.principal,
+        b.interest,
+        b.maturity_time,
+        b.payment_time,
+        b.`status`
+        FROM
+        bill b LEFT JOIN p2p_mark pm on pm.borrower_id = b.user_id
+        <where>
+            <if test="isWho == 1">
+
+                b.user_id = #{userId}
+            </if>
+            <if test="isWho == 2">
+                pm.buyer=#{userId}
+
+            </if>
+
+            AND b.mark_id = #{markId}
+
+
+        </where>
+
+
+    </select>
+</mapper>
